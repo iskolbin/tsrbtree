@@ -61,7 +61,7 @@ export class RBTree<K,V> {
 			let p: MaybeRBNode<K,V> = undefined
 			let node: MaybeRBNode<K,V> = this._root
 			let dir: RBDirection = RBDirection.Left
-			let last: RBDirection = RBDirection.Left;
+			let last: RBDirection = RBDirection.Left
 
 			ggp.set( RBDirection.Right, this._root )
 
@@ -70,16 +70,19 @@ export class RBTree<K,V> {
 					node = new RBNode( key, value );
 					(<RBNode<K,V>>p).set( dir, node )
 					this._size++
-				} else if ( isRed( node.left ) && isRed( node.right )) {
-					node.color = RBColor.Red;
-					(<RBNode<K,V>>node.left).color = RBColor.Black;
-					(<RBNode<K,V>>node.right).color = RBColor.Black
+				} else {
+					const {left, right} = node
+					if ( isRed( left ) && isRed( right )) {
+						node.color = RBColor.Red
+						left.color = RBColor.Black
+						right.color = RBColor.Black
+					}
 				}
 
 				if ( isRed( node ) && isRed( p )) {
 					const dir2: RBDirection = ggp.right === gp ? RBDirection.Right : RBDirection.Left
 					const negLast = last === RBDirection.Left ? RBDirection.Right : RBDirection.Left 
-					if ( node === (<any>p).get( last )) {
+					if ( node === p.get( last )) {
 						ggp.set( dir2, gp !== undefined ? gp.singleRotation( negLast ) : gp )
 					} else {
 						ggp.set( dir2, gp !== undefined ? gp.doubleRotation( negLast ) : gp )

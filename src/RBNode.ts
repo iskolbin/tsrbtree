@@ -10,7 +10,7 @@ export const enum RBDirection {
 
 export type MaybeRBNode<K,V> = RBNode<K,V> | undefined
 
-export function isRed<K,V>( node: MaybeRBNode<K,V> ) {
+export function isRed<K,V>( node: MaybeRBNode<K,V> ): node is RBNode<K,V> {
 	return node !== undefined && node.color == RBColor.Red
 }
 
