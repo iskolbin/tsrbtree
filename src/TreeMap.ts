@@ -1,4 +1,4 @@
-import { RBColor, RBDirection, MaybeRBNode, RBNode, isRed } from './RBNode'
+import { Color, Direction, MaybeTreeNode, TreeNode, isRed } from './TreeNode'
 
 const DEL: any = {}
 
@@ -10,22 +10,34 @@ function DEFAULT_COMPARATOR( a: any, b: any ): number {
 	return a < b ? -1 : a > b ? 1 : 0
 }
 
-export class RBTree<K,V> {
-	protected _root: MaybeRBNode<K,V> = undefined
+export class TreeMap<K,V> {
+	protected _root: MaybeTreeNode<K,V> = undefined
 	protected _size: number = 0
 	protected _deleted: number = 0
+	protected _comparator: (a: K, b: K) => number 
 
-	constructor( 
-		protected _comparator: (a: K, b: K) => number = DEFAULT_COMPARATOR
-	) {
+	constructor(
+		iterable?: [K,V][],
+		comparator: ( a: K, b: K ) => number = DEFAULT_COMPARATOR 
+	) { 
+		this._comparator = comparator
+		if ( iterable ) {
+			for ( const [k,v] of iterable ) {
+				this.set( k, v )
+			}
+		}
 	}
 
 	get size(): number {
 		return this._size
 	}
 
-	protected getNode( key: K ): MaybeRBNode<K,V> {
-		let current: MaybeRBNode<K,V> = this._root
+	get deleted(): number {
+		return this._deleted
+	}
+
+	protected getNode( key: K ): MaybeTreeNode<K,V> {
+		let current: MaybeTreeNode<K,V> = this._root
 		for (;;) {
 			if ( current === undefined ) {
 				return undefined
@@ -34,7 +46,7 @@ export class RBTree<K,V> {
 				if ( cmp === 0 ) {
 					return current
 				} else {
-					current = current.get( cmp < 0 ? RBDirection.Left : RBDirection.Right )
+					current = current.get( cmp < 0 ? Direction.Left : Direction.Right )
 				}
 			}
 		}
@@ -50,38 +62,38 @@ export class RBTree<K,V> {
 		return (node === undefined || node.value === DEL ) ? undefined : node.value
 	}
 
-	set( key: K, value: V ): RBTree<K,V> {
+	set( key: K, value: V ): TreeMap<K,V> {
 		if ( this._root === undefined ) {
-			this._root = new RBNode( key, value )
+			this._root = new TreeNode( key, value )
 			this._size++
 		} else {
-			let head: RBNode<K,V> = new RBNode( key, value )
-			let gp: MaybeRBNode<K,V> = undefined
-			let ggp: RBNode<K,V> = head
-			let p: MaybeRBNode<K,V> = undefined
-			let node: MaybeRBNode<K,V> = this._root
-			let dir: RBDirection = RBDirection.Left
-			let last: RBDirection = RBDirection.Left
+			let head: TreeNode<K,V> = new TreeNode( key, value )
+			let gp: MaybeTreeNode<K,V> = undefined
+			let ggp: TreeNode<K,V> = head
+			let p: MaybeTreeNode<K,V> = undefined
+			let node: MaybeTreeNode<K,V> = this._root
+			let dir: Direction = Direction.Left
+			let last: Direction = Direction.Left
 
-			ggp.set( RBDirection.Right, this._root )
+			ggp.set( Direction.Right, this._root )
 
 			for (;;) {
 				if ( node === undefined ) {
-					node = new RBNode( key, value );
-					(<RBNode<K,V>>p).set( dir, node )
+					node = new TreeNode( key, value );
+					(<TreeNode<K,V>>p).set( dir, node )
 					this._size++
 				} else {
 					const {left, right} = node
 					if ( isRed( left ) && isRed( right )) {
-						node.color = RBColor.Red
-						left.color = RBColor.Black
-						right.color = RBColor.Black
+						node.color = Color.Red
+						left.color = Color.Black
+						right.color = Color.Black
 					}
 				}
 
 				if ( isRed( node ) && isRed( p )) {
-					const dir2: RBDirection = ggp.right === gp ? RBDirection.Right : RBDirection.Left
-					const negLast = last === RBDirection.Left ? RBDirection.Right : RBDirection.Left 
+					const dir2: Direction = ggp.right === gp ? Direction.Right : Direction.Left
+					const negLast = last === Direction.Left ? Direction.Right : Direction.Left 
 					if ( node === p.get( last )) {
 						ggp.set( dir2, gp !== undefined ? gp.singleRotation( negLast ) : gp )
 					} else {
@@ -100,7 +112,7 @@ export class RBTree<K,V> {
 				}
 
 				last = dir
-				dir = node.key < key ? RBDirection.Right : RBDirection.Left
+				dir = node.key < key ? Direction.Right : Direction.Left
 
 				if ( gp !== undefined ) {
 					ggp = gp
@@ -113,7 +125,7 @@ export class RBTree<K,V> {
 			this._root = head.right
 		}
 
-		(<RBNode<K,V>>this._root).color = RBColor.Black
+		(<TreeNode<K,V>>this._root).color = Color.Black
 		return this
 	}
 
@@ -137,8 +149,11 @@ export class RBTree<K,V> {
 		}
 	}
 
-	forEach<Z>( callbackFn: (this: Z, value: V, key: K, tree: RBTree<K,V>) => void, thisArg?: Z ): void {
-		const stack: RBNode<K,V>[] = []
+	forEach<Z>(
+		callbackFn: (this: Z, value: V, key: K, tree: this) => void,
+		thisArg?: Z
+	): void {
+		const stack: TreeNode<K,V>[] = []
 		if ( this._root ) stack.push( this._root )
 		for ( let node = stack.pop(); node !== undefined; node = stack.pop()) {
 			const {key, value, left, right} = node
@@ -148,9 +163,12 @@ export class RBTree<K,V> {
 		}
 	}
 
-	filter<Z>( callbackFn: (this: Z, value: V, key: K, tree: RBTree<K,V>) => boolean = ALWAYS_TRUE, thisArg?: Z ): RBTree<K,V> {
-		const result = new RBTree<K,V>( this._comparator )
-		this.forEach<Z>( ( v: V, k: K, tree: RBTree<K,V> ): void => {
+	filter<Z>(
+		callbackFn: (this: Z, value: V, key: K, tree: this ) => boolean = ALWAYS_TRUE,
+		thisArg?: Z,
+		result: TreeMap<K,V> = new TreeMap<K,V>( undefined,this._comparator )
+	): TreeMap<K,V> {	
+		this.forEach<Z>( ( v: V, k: K, tree: this ): void => {
 			if ( v !== DEL && callbackFn.call( thisArg, v, k, tree )) {
 				result.set( k, v )
 			}
