@@ -70,14 +70,14 @@ export class RBTree<K,V> {
 					node = new RBNode( key, value );
 					(<RBNode<K,V>>p).set( dir, node )
 					this._size++
-				} else if ( isRed(node.get( RBDirection.Left )) && isRed( node.get( RBDirection.Right ))) {
+				} else if ( isRed( node.left ) && isRed( node.right )) {
 					node.color = RBColor.Red;
-					(<RBNode<K,V>>node.get( RBDirection.Left )).color = RBColor.Black;
-					(<RBNode<K,V>>node.get( RBDirection.Right )).color = RBColor.Black
+					(<RBNode<K,V>>node.left).color = RBColor.Black;
+					(<RBNode<K,V>>node.right).color = RBColor.Black
 				}
 
 				if ( isRed( node ) && isRed( p )) {
-					const dir2: RBDirection = ggp.get( RBDirection.Right ) === gp ? RBDirection.Right : RBDirection.Left
+					const dir2: RBDirection = ggp.right === gp ? RBDirection.Right : RBDirection.Left
 					const negLast = last === RBDirection.Left ? RBDirection.Right : RBDirection.Left 
 					if ( node === (<any>p).get( last )) {
 						ggp.set( dir2, gp !== undefined ? gp.singleRotation( negLast ) : gp )
@@ -107,7 +107,7 @@ export class RBTree<K,V> {
 				p = node
 				node = node.get( dir )
 			}
-			this._root = head.get( RBDirection.Right )
+			this._root = head.right
 		}
 
 		(<RBNode<K,V>>this._root).color = RBColor.Black
